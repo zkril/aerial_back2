@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zkril.aerial_back.mapper.TemplateConfigsMapper">
+
+    <resultMap id="BaseResultMap" type="com.zkril.aerial_back.pojo.TemplateConfigs">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="projectId" column="project_id" jdbcType="INTEGER"/>
+            <result property="name" column="NAME" jdbcType="VARCHAR"/>
+            <result property="type" column="TYPE" jdbcType="VARCHAR"/>
+            <result property="frequencyStart" column="frequency_start" jdbcType="DOUBLE"/>
+            <result property="frequencyEnd" column="frequency_end" jdbcType="DOUBLE"/>
+            <result property="frequencyPoints" column="frequency_points" jdbcType="INTEGER"/>
+            <result property="thetaStart" column="theta_start" jdbcType="DOUBLE"/>
+            <result property="thetaEnd" column="theta_end" jdbcType="DOUBLE"/>
+            <result property="thetaPoints" column="theta_points" jdbcType="INTEGER"/>
+            <result property="phiStart" column="phi_start" jdbcType="DOUBLE"/>
+            <result property="phiEnd" column="phi_end" jdbcType="DOUBLE"/>
+            <result property="phiPoints" column="phi_points" jdbcType="INTEGER"/>
+            <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+            <result property="monteCarloNum" column="monte_carlo_num" jdbcType="INTEGER"/>
+            <result property="omniDire" column="omni_dire" jdbcType="INTEGER"/>
+            <result property="uniform" column="uniform" jdbcType="INTEGER"/>
+            <result property="gaussnoise" column="gaussNoise" jdbcType="INTEGER"/>
+            <result property="idealPointNum" column="ideal_point_num" jdbcType="INTEGER"/>
+            <result property="isRobust" column="is_robust" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,project_id,NAME,
+        TYPE,frequency_start,frequency_end,
+        frequency_points,theta_start,theta_end,
+        theta_points,phi_start,phi_end,
+        phi_points,created_time,monte_carlo_num,
+        omni_dire,uniform,gaussNoise,
+        ideal_point_num,is_robust
+    </sql>
+</mapper>

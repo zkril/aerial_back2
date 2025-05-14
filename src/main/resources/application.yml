@@ -1,0 +1,48 @@
+server:
+  port: 9301
+spring:
+  datasource:
+    # 配置数据源类型
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/aerial?characterEncoding=utf-8&serverTimezone=GMT%2B8&userSSL=false
+    username: root
+    password: nacl000---
+
+    # Mybatis-plus内置连接池
+    hikari:
+      connection-test-query: SELECT 1
+      connection-timeout: 60000
+      idle-timeout: 500000
+      max-lifetime: 540000
+      maximum-pool-size: 12
+      minimum-idle: 10
+      pool-name: GuliHikariPool
+    thymeleaf:
+      # 模板的模式，支持 HTML, XML TEXT JAVASCRIPT
+      mode: HTML5
+      # 编码 可不用配置
+      encoding: UTF-8
+  servlet:
+    multipart:
+      enabled: true #默认支持文件上传
+      max-file-size: -1 #不做限制
+      max-request-size: -1 #不做限制
+
+  application:
+    name: aerial_back
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: 2492979242@qq.com
+    password: qjygytgwzbxldjai   # 注意是授权码，不是登录密码
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    default-encoding: UTF-8
+
+

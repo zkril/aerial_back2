@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zkril.aerial_back.mapper.ProductsMapper">
+
+    <resultMap id="BaseResultMap" type="com.zkril.aerial_back.pojo.Products">
+            <id property="productId" column="product_id" jdbcType="INTEGER"/>
+            <result property="name" column="name" jdbcType="VARCHAR"/>
+            <result property="intro" column="intro" jdbcType="VARCHAR"/>
+            <result property="buylink" column="buylink" jdbcType="VARCHAR"/>
+            <result property="photo" column="photo" jdbcType="VARCHAR"/>
+            <result property="data1Name" column="data1_name" jdbcType="VARCHAR"/>
+            <result property="data1Min" column="data1_min" jdbcType="VARCHAR"/>
+            <result property="data1Normal" column="data1_normal" jdbcType="VARCHAR"/>
+            <result property="data1Max" column="data1_max" jdbcType="VARCHAR"/>
+            <result property="data1Unit" column="data1_unit" jdbcType="VARCHAR"/>
+            <result property="data2Name" column="data2_name" jdbcType="VARCHAR"/>
+            <result property="data2Text" column="data2_text" jdbcType="VARCHAR"/>
+            <result property="homePhoto" column="home_photo" jdbcType="VARCHAR"/>
+            <result property="descp" column="descp" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        product_id,name,intro,
+        buylink,photo,data1_name,
+        data1_min,data1_normal,data1_max,
+        data1_unit,data2_name,data2_text,
+        home_photo,descp
+    </sql>
+</mapper>

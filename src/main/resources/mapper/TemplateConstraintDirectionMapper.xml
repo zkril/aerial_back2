@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zkril.aerial_back.mapper.TemplateConstraintDirectionMapper">
+
+    <resultMap id="BaseResultMap" type="com.zkril.aerial_back.pojo.TemplateConstraintDirection">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="templateConfigId" column="template_config_id" jdbcType="BIGINT"/>
+            <result property="expression" column="expression" jdbcType="VARCHAR"/>
+            <result property="thetaStart" column="theta_start" jdbcType="DOUBLE"/>
+            <result property="thetaEnd" column="theta_end" jdbcType="DOUBLE"/>
+            <result property="phiStart" column="phi_start" jdbcType="DOUBLE"/>
+            <result property="phiEnd" column="phi_end" jdbcType="DOUBLE"/>
+            <result property="status" column="status" jdbcType="VARCHAR"/>
+            <result property="limitValue" column="limit_value" jdbcType="DOUBLE"/>
+            <result property="errorValue" column="error_value" jdbcType="DOUBLE"/>
+            <result property="weightValue" column="weight_value" jdbcType="DOUBLE"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,template_config_id,expression,
+        theta_start,theta_end,phi_start,
+        phi_end,status,limit_value,
+        error_value,weight_value
+    </sql>
+</mapper>

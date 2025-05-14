@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zkril.aerial_back.mapper.TemplateOptimizeVariablesMapper">
+
+    <resultMap id="BaseResultMap" type="com.zkril.aerial_back.pojo.TemplateOptimizeVariables">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="templateConfigId" column="template_config_id" jdbcType="BIGINT"/>
+            <result property="name" column="name" jdbcType="VARCHAR"/>
+            <result property="minValue" column="min_value" jdbcType="VARCHAR"/>
+            <result property="maxValue" column="max_value" jdbcType="VARCHAR"/>
+            <result property="defaultValue" column="default_value" jdbcType="VARCHAR"/>
+            <result property="optimize1" column="optimize1" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,template_config_id,name,
+        min_value,max_value,default_value,
+        optimize1
+    </sql>
+</mapper>

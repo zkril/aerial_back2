@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zkril.aerial_back.mapper.TemplateAlgorithmParamMapper">
+
+    <resultMap id="BaseResultMap" type="com.zkril.aerial_back.pojo.TemplateAlgorithmParam">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="algorithm" column="algorithm" jdbcType="VARCHAR"/>
+            <result property="label" column="label" jdbcType="VARCHAR"/>
+            <result property="paramKey" column="param_key" jdbcType="VARCHAR"/>
+            <result property="defaultValue" column="default_value" jdbcType="VARCHAR"/>
+            <result property="valueType" column="value_type" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,algorithm,label,
+        param_key,default_value,value_type
+    </sql>
+</mapper>

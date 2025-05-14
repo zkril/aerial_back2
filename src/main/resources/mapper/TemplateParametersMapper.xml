@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zkril.aerial_back.mapper.TemplateParametersMapper">
+
+    <resultMap id="BaseResultMap" type="com.zkril.aerial_back.pojo.TemplateParameters">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="projectId" column="project_id" jdbcType="INTEGER"/>
+            <result property="algorithmName" column="ALGORITHM_NAME" jdbcType="VARCHAR"/>
+            <result property="evaluateTimeout" column="EVALUATE_TIMEOUT" jdbcType="INTEGER"/>
+            <result property="problemName" column="PROBLEM_NAME" jdbcType="VARCHAR"/>
+            <result property="threadnum" column="ThreadNum" jdbcType="INTEGER"/>
+            <result property="continuelastbreakpoint" column="continueLastbreakpoint" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,project_id,ALGORITHM_NAME,
+        EVALUATE_TIMEOUT,PROBLEM_NAME,ThreadNum,
+        continueLastbreakpoint
+    </sql>
+</mapper>
