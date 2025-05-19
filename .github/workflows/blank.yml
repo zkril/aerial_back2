@@ -28,23 +28,23 @@ jobs:
       - name: Deploy via WinRM (HTTP 5985, Basic)
         shell: pwsh
         run: |
-          # 4-1 在 Runner 侧允许 Basic，并设置 TrustedHosts
           Set-Item WSMan:\localhost\Client\Auth\Basic   -Value $true
+          Set-Item WSMan:\localhost\Client\AllowUnencrypted -Value $true   
           Set-Item WSMan:\localhost\Client\TrustedHosts -Value "${{ secrets.HOST }}" -Force
 
-          # 4-2 构造凭据对象
+
           $Password = ConvertTo-SecureString "${{ secrets.PASSWORD }}" -AsPlainText -Force
           $Cred     = New-Object System.Management.Automation.PSCredential("${{ secrets.USERNAME }}", $Password)
 
-          # 4-3 建立会话（Basic）
+
           $Session = New-PSSession -ComputerName ${{ secrets.HOST }} `
                      -Credential $Cred -Authentication Basic
 
-          # 4-4 复制 JAR 到 C:\deploy
+
           Copy-Item -Path .\target\springboot.jar `
             -Destination 'C:\deploy\' -ToSession $Session -Force
 
-          # 4-5 远程重启 Spring Boot
+
           Invoke-Command -Session $Session -ScriptBlock {
             $Jar = 'C:\deploy\springboot.jar'
             $p   = Get-Process | Where-Object { $_.Path -eq $Jar }
@@ -56,5 +56,5 @@ jobs:
             Write-Host "新进程已启动"
           }
 
-          # 4-6 结束会话
+
           Remove-PSSession $Session
