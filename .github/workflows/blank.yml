@@ -1,4 +1,4 @@
-name: Java CI on Windows with Maven
+name: Java CI & Deploy (WinRM HTTP)
 
 on:
   push:
@@ -9,8 +9,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      # ① 拉代码
       - uses: actions/checkout@v3
 
+      # ② 安装 JDK 8（Temurin）
       - name: Set up JDK 8
         uses: actions/setup-java@v3
         with:
@@ -18,35 +20,41 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      # ③ Maven 打包
       - name: Build with Maven
         run: mvn -B clean package --file pom.xml
 
-      - name: Deploy to Windows Server via PowerShell
+      # ④ 部署到远程 Windows
+      - name: Deploy via WinRM (HTTP 5985, Basic)
         shell: pwsh
         run: |
-          $ErrorActionPreference = "Stop"
+          # 4-1 在 Runner 侧允许 Basic，并设置 TrustedHosts
+          Set-Item WSMan:\localhost\Client\Auth\Basic   -Value $true
+          Set-Item WSMan:\localhost\Client\TrustedHosts -Value "${{ secrets.HOST }}" -Force
 
+          # 4-2 构造凭据对象
           $Password = ConvertTo-SecureString "${{ secrets.PASSWORD }}" -AsPlainText -Force
-          $Cred = New-Object System.Management.Automation.PSCredential("${{ secrets.USERNAME }}", $Password)
+          $Cred     = New-Object System.Management.Automation.PSCredential("${{ secrets.USERNAME }}", $Password)
 
-          $Session = New-PSSession -ComputerName ${{ secrets.HOST }} -Credential $Cred -Authentication Basic
+          # 4-3 建立会话（Basic）
+          $Session = New-PSSession -ComputerName ${{ secrets.HOST }} `
+                     -Credential $Cred -Authentication Basic
 
-          # 复制构建产物到远程服务器
-          Copy-Item -Path .\target\springboot.jar -Destination "C:\deploy\" -ToSession $Session -Force
+          # 4-4 复制 jar 到 C:\deploy
+          Copy-Item -Path .\target\springboot.jar `
+            -Destination 'C:\deploy\' -ToSession $Session -Force
 
-          # 重启 SpringBoot 应用
+          # 4-5 远程重启 Spring Boot
           Invoke-Command -Session $Session -ScriptBlock {
-            $JarPath = "C:\deploy\springboot.jar"
-            $Process = Get-Process | Where-Object { $_.Path -eq $JarPath }
-            if ($Process) {
-              Stop-Process -Id $Process.Id -Force
-              Write-Host "已停止旧进程：$($Process.Id)"
-            } else {
-              Write-Host "未找到旧进程"
+            $Jar = 'C:\deploy\springboot.jar'
+            $p   = Get-Process | Where-Object { $_.Path -eq $Jar }
+            if ($p) {
+              Stop-Process -Id $p.Id -Force
+              Write-Host "已停止旧进程 $($p.Id)"
             }
-
-            Start-Process "java" "-jar -Xmx1024M -Xms256M $JarPath"
+            Start-Process "java" "-jar -Xmx1024M -Xms256M $Jar"
             Write-Host "新进程已启动"
           }
 
+          # 4-6 结束会话
           Remove-PSSession $Session
