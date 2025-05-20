@@ -81,12 +81,12 @@ public class SessionController {
             );
 
             // 获取未读数量（对方发给当前用户 & 未读）
-            Long unread = chatMessagesMapper.selectCount(
+            Long unread = Long.valueOf(chatMessagesMapper.selectCount(
                     new QueryWrapper<ChatMessages>()
                             .eq("from_user_id", otherUserId)
                             .eq("to_user_id", userId)
                             .eq("is_read", 0)
-            );
+            ));
 
             Map<String, Object> map = new HashMap<>();
             map.put("id", otherUser.getUserId());

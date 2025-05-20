@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zkril.aerial_back.mapper.ProductCommentsMapper">
+
+    <resultMap id="BaseResultMap" type="com.zkril.aerial_back.pojo.ProductComments">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="userId" column="user_id" jdbcType="INTEGER"/>
+            <result property="productId" column="product_id" jdbcType="INTEGER"/>
+            <result property="intro" column="intro" jdbcType="VARCHAR"/>
+            <result property="photo" column="photo" jdbcType="VARCHAR"/>
+            <result property="likeNumber" column="like_number" jdbcType="INTEGER"/>
+            <result property="createdTime" column="created_time" jdbcType="TIMESTAMP"/>
+            <result property="isread" column="isread" jdbcType="TINYINT"/>
+            <result property="notified" column="notified" jdbcType="TINYINT"/>
+            <result property="replyTo" column="reply_to" jdbcType="INTEGER"/>
+            <result property="likedUserIds" column="liked_user_ids" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,user_id,product_id,
+        intro,photo,like_number,
+        created_time,isread,notified,
+        reply_to,liked_user_ids
+    </sql>
+</mapper>
