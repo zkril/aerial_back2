@@ -1,95 +1,18 @@
-POST http://localhost:9301/projects/create
-Content-Type: application/json
+### 前沿图
+GET http://localhost:9301/result/list/25
 
-{
-  "userId": 1,
-  "folderId": 1,
-  "itemName": "圆阵优化项目",
-  "imageUrl": "",
-  "type": "Ideal_Circular",
-  "name": "理想圆阵模板",
-  "frequencyStart": 1.0,
-  "frequencyEnd": 10.0,
-  "frequencyPoints": 201,
-  "thetaStart": 0.0,
-  "thetaEnd": 180.0,
-  "thetaPoints": 181,
-  "phiStart": 0.0,
-  "phiEnd": 360.0,
-  "phiPoints": 361,
-  "monteCarloNum": 100,
-  "omniDire": 1,
-  "uniform": 1,
-  "gaussnoise": 0,
-  "idealPointNum": 5,
-  "isRobust": 1,
-  "optimizeList": [
-    {
-      "name": "r1(mm)",
-      "min": "0",
-      "max": "2500",
-      "default": "500",
-      "optimize_1": 1,
-      "fixed": true
-    },
-    {
-      "name": "point_phe1(°)",
-      "min": "0",
-      "max": "180",
-      "default": "72",
-      "optimize_1": 1,
-      "fixed": false
-    },
-    {
-      "name": "point_phe2(°)",
-      "min": "0",
-      "max": "180",
-      "default": "144",
-      "optimize_1": 1,
-      "fixed": false
-    }
-  ],
-  "targetList": [
-    {
-      "target": "侧向误差",
-      "thetaStart": 4,
-      "thetaEnd": 5,
-      "phiStart": 4,
-      "phiEnd": 5,
-      "optimizeType": "min"
-    },
-    {
-      "target": "第二相关峰",
-      "thetaStart": 10,
-      "thetaEnd": 15,
-      "phiStart": 20,
-      "phiEnd": 25,
-      "optimizeType": "min"
-    }
-  ],
-  "constraintList": [
-    {
-      "expression": "侧向误差",
-      "thetaStart": 4,
-      "thetaEnd": 5,
-      "phiStart": 4,
-      "phiEnd": 5,
-      "status": "<=",
-      "limit": "0.0",
-      "error": "0.1",
-      "weight": "1.0"
-    }
-  ],
-  "algorithmName": "DCNSGA_II_DE_MO",
-  "continueLastbreakpoint": 1,
-  "evaluateTimeout": 2000,
-  "nodeandthread": "[\"Node1\",\"Thread1\"]",
-  "outputFreq": 50,
-  "saveAnalysisresult": 1,
-  "threadNum": 8,
-  "outfilepath": "/path/to/result",
-  "outhfsspath": "/path/to/hfss"
-}
 
-###
-POST http://localhost:9301/projects/export/ideal_conf
+### 空间拓扑图
+GET http://localhost:9301/result/pheno/1
+
+
+
+### 二维矩形图
+GET http://localhost:9301/result/2dr/1?primarytype=Phi&category=测向误差
+
+### 二维矩形图
+GET http://localhost:9301/result/2dr/1?primarytype=Phi&category=测向误差&unit=rad
+
+### 二维矩形图
+GET http://localhost:9301/result/2dr/1?primarytype=Phi&category=第二相关峰
+
