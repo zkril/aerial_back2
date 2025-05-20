@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/projects")
@@ -60,6 +61,31 @@ public class ProjectController {
         }
 
         return Result.ok(result);
+    }
+
+
+    @GetMapping("/checkName")
+    public Result checkProjectName(@RequestParam Integer folderId,
+                                   @RequestParam String itemName) {
+
+        // 基本参数校验
+        if (folderId == null || itemName == null || itemName.trim().isEmpty()) {
+            return Result.fail("缺少必要的字段");
+        }
+        String trimmedName = itemName.trim();
+
+        // 查询同一文件夹下是否已存在同名项目/文件
+        QueryWrapper<Projects> wrapper = new QueryWrapper<>();
+        wrapper.eq("folder_id", folderId)
+                .eq("name", trimmedName)
+                .last("LIMIT 1");           // 只需判断存在即可
+
+        Projects existing = projectsMapper.selectOne(wrapper);
+
+        if (existing != null) {
+            return Result.fail("同名项目已存在");
+        }
+        return Result.ok("名称可用");
     }
 
 
@@ -183,6 +209,284 @@ public class ProjectController {
         return Result.ok("项目及模板创建成功");
     }
 
+
+
+    @GetMapping("/detail/{projectId}")
+    public Result getFullProjectDetail(@PathVariable Integer projectId) {
+
+        Projects project = projectsMapper.selectById(projectId);
+        if (project == null) {
+            return Result.fail("项目不存在");
+        }
+
+        TemplateConfigs config = templateConfigsMapper.selectById(project.getTemplateConfigId());
+        TemplateParameters parameters = templateParametersMapper.selectById(project.getTemplateParametersId());
+
+        // DTO填充
+        FullProjectDto dto = new FullProjectDto();
+
+        // 1. 项目信息
+        dto.setUserId(project.getUserId());
+        dto.setFolderId(project.getFolderId());
+        dto.setItemName(project.getName());
+        dto.setImageUrl(project.getImageUrl());
+        dto.setType(project.getTemplateType());
+
+        // 2. TemplateConfigs
+        if (config != null) {
+            dto.setName(config.getName());
+            dto.setFrequencyStart(config.getFrequencyStart());
+            dto.setFrequencyEnd(config.getFrequencyEnd());
+            dto.setFrequencyPoints(config.getFrequencyPoints());
+            dto.setThetaStart(config.getThetaStart());
+            dto.setThetaEnd(config.getThetaEnd());
+            dto.setThetaPoints(config.getThetaPoints());
+            dto.setPhiStart(config.getPhiStart());
+            dto.setPhiEnd(config.getPhiEnd());
+            dto.setPhiPoints(config.getPhiPoints());
+            dto.setMonteCarloNum(config.getMonteCarloNum());
+            dto.setOmniDire(config.getOmniDire());
+            dto.setUniform(config.getUniform());
+            dto.setGaussnoise(config.getGaussnoise());
+            dto.setIdealPointNum(config.getIdealPointNum());
+            dto.setIsRobust(config.getIsRobust());
+
+            // 优化变量列表
+            List<TemplateOptimizeVariables> optimizeVars = templateOptimizeVariablesMapper.selectList(
+                    new QueryWrapper<TemplateOptimizeVariables>()
+                            .eq("template_config_id", config.getId())
+            );
+            List<OptimizeVariableDTO> optimizeDtos = optimizeVars.stream().map(var -> {
+                OptimizeVariableDTO optDto = new OptimizeVariableDTO();
+                optDto.setName(var.getName());
+                optDto.setMin(var.getMinValue());
+                optDto.setMax(var.getMaxValue());
+                optDto.setDefaultValue(var.getDefaultValue());
+                optDto.setOptimize_1(var.getOptimize1() != null && var.getOptimize1() == 1);
+                return optDto;
+            }).collect(Collectors.toList());
+            dto.setOptimizeList(optimizeDtos);
+
+            // 目标方向
+            List<TemplateObjectiveDirectionTarget> targets = templateObjectiveDirectionTargetMapper.selectList(
+                    new QueryWrapper<TemplateObjectiveDirectionTarget>()
+                            .eq("template_config_id", config.getId())
+            );
+            List<ObjectiveDirectionTargetDto> targetDtos = targets.stream().map(target -> {
+                ObjectiveDirectionTargetDto objDto = new ObjectiveDirectionTargetDto();
+                objDto.setTarget(target.getTarget());
+                objDto.setThetaStart(target.getThetaStart());
+                objDto.setThetaEnd(target.getThetaEnd());
+                objDto.setPhiStart(target.getPhiStart());
+                objDto.setPhiEnd(target.getPhiEnd());
+                objDto.setOptimizeType(target.getOptimizeType());
+                return objDto;
+            }).collect(Collectors.toList());
+            dto.setTargetList(targetDtos);
+
+            // 约束方向
+            List<TemplateConstraintDirection> constraints = templateConstraintDirectionMapper.selectList(
+                    new QueryWrapper<TemplateConstraintDirection>()
+                            .eq("template_config_id", config.getId())
+            );
+            List<ConstraintDirectionDto> constraintDtos = constraints.stream().map(cons -> {
+                ConstraintDirectionDto consDto = new ConstraintDirectionDto();
+                consDto.setExpression(cons.getExpression());
+                consDto.setThetaStart(cons.getThetaStart());
+                consDto.setThetaEnd(cons.getThetaEnd());
+                consDto.setPhiStart(cons.getPhiStart());
+                consDto.setPhiEnd(cons.getPhiEnd());
+                consDto.setStatus(cons.getStatus());
+                consDto.setLimit(String.valueOf(cons.getLimitValue()));
+                consDto.setError(String.valueOf(cons.getErrorValue()));
+                consDto.setWeight(String.valueOf(cons.getWeightValue()));
+                return consDto;
+            }).collect(Collectors.toList());
+            dto.setConstraintList(constraintDtos);
+        }
+
+        // 3. TemplateParameters
+        if (parameters != null) {
+            dto.setAlgorithmName(parameters.getAlgorithmName());
+            dto.setContinueLastbreakpoint(parameters.getContinuelastbreakpoint());
+            dto.setEvaluateTimeout(parameters.getEvaluateTimeout());
+            dto.setThreadNum(parameters.getThreadnum());
+
+            // 算法参数列表
+            List<AlgorithmParamInstance> algParams = algorithmParamInstanceMapper.selectList(
+                    new QueryWrapper<AlgorithmParamInstance>()
+                            .eq("project_id", projectId)
+                            .eq("algorithm", parameters.getAlgorithmName())
+            );
+            List<AlgorithmParamItemDto> algParamDtos = algParams.stream().map(item -> {
+                AlgorithmParamItemDto itemDto = new AlgorithmParamItemDto();
+                itemDto.setKey(item.getParamKey());
+                itemDto.setValue(item.getValue());
+                itemDto.setLabel(item.getNote());
+                return itemDto;
+            }).collect(Collectors.toList());
+            dto.setAlgorithmParamList(algParamDtos);
+        }
+
+        return Result.ok(dto);
+    }
+
+    @PostMapping("/update/{projectId}")
+    @Transactional(rollbackFor = Exception.class)
+    public Result updateProject(@PathVariable Integer projectId, @RequestBody FullProjectDto dto) {
+
+        Projects project = projectsMapper.selectById(projectId);
+        if (project == null) {
+            return Result.fail("项目不存在");
+        }
+
+        // ====== 修改项目表 Projects ======
+        boolean projectModified = false;
+        if (dto.getItemName() != null) {
+            project.setName(dto.getItemName());
+            projectModified = true;
+        }
+        if (dto.getFolderId() != null) {
+            project.setFolderId(dto.getFolderId());
+            projectModified = true;
+        }
+        if (dto.getImageUrl() != null) {
+            project.setImageUrl(dto.getImageUrl());
+            projectModified = true;
+        }
+        if (projectModified) {
+            project.setUpdateTime(new Date());
+            projectsMapper.updateById(project);
+        }
+
+        // ====== 修改 TemplateConfigs ======
+        TemplateConfigs config = templateConfigsMapper.selectById(project.getTemplateConfigId());
+        if (config != null) {
+            boolean configModified = false;
+
+            if (dto.getName() != null) {
+                config.setName(dto.getName());
+                configModified = true;
+            }
+            if (dto.getFrequencyStart() != null) {
+                config.setFrequencyStart(dto.getFrequencyStart());
+                configModified = true;
+            }
+            if (dto.getFrequencyEnd() != null) {
+                config.setFrequencyEnd(dto.getFrequencyEnd());
+                configModified = true;
+            }
+            // 依次类推其他字段...
+            if (dto.getFrequencyPoints() != null) {
+                config.setFrequencyPoints(dto.getFrequencyPoints());
+                configModified = true;
+            }
+            // 补充其他config字段，如 thetaStart, phiStart 等...
+
+            if (configModified) {
+                templateConfigsMapper.updateById(config);
+            }
+
+            // 优化变量、目标、约束等复杂字段可先删除旧的再重新插入（简单粗暴但有效）
+            if (dto.getOptimizeList() != null) {
+                templateOptimizeVariablesMapper.delete(new QueryWrapper<TemplateOptimizeVariables>().eq("template_config_id", config.getId()));
+                dto.getOptimizeList().forEach(optDto -> {
+                    TemplateOptimizeVariables varEntity = new TemplateOptimizeVariables();
+                    varEntity.setTemplateConfigId(Long.valueOf(config.getId()));
+                    varEntity.setName(optDto.getName());
+                    varEntity.setMinValue(optDto.getMin());
+                    varEntity.setMaxValue(optDto.getMax());
+                    varEntity.setDefaultValue(optDto.getDefaultValue());
+                    varEntity.setOptimize1(optDto.getOptimize_1() ? 1 : 0);
+                    templateOptimizeVariablesMapper.insert(varEntity);
+                });
+            }
+
+            // 目标方向同理
+            if (dto.getTargetList() != null) {
+                templateObjectiveDirectionTargetMapper.delete(new QueryWrapper<TemplateObjectiveDirectionTarget>().eq("template_config_id", config.getId()));
+                dto.getTargetList().forEach(dtoItem -> {
+                    TemplateObjectiveDirectionTarget entity = new TemplateObjectiveDirectionTarget();
+                    entity.setTemplateConfigId(Long.valueOf(config.getId()));
+                    entity.setTarget(dtoItem.getTarget());
+                    entity.setThetaStart(dtoItem.getThetaStart());
+                    entity.setThetaEnd(dtoItem.getThetaEnd());
+                    entity.setPhiStart(dtoItem.getPhiStart());
+                    entity.setPhiEnd(dtoItem.getPhiEnd());
+                    entity.setOptimizeType(dtoItem.getOptimizeType());
+                    templateObjectiveDirectionTargetMapper.insert(entity);
+                });
+            }
+
+            // 约束方向同理
+            if (dto.getConstraintList() != null) {
+                templateConstraintDirectionMapper.delete(new QueryWrapper<TemplateConstraintDirection>().eq("template_config_id", config.getId()));
+                dto.getConstraintList().forEach(item -> {
+                    TemplateConstraintDirection entity = new TemplateConstraintDirection();
+                    entity.setTemplateConfigId(Long.valueOf(config.getId()));
+                    entity.setExpression(item.getExpression());
+                    entity.setThetaStart(item.getThetaStart());
+                    entity.setThetaEnd(item.getThetaEnd());
+                    entity.setPhiStart(item.getPhiStart());
+                    entity.setPhiEnd(item.getPhiEnd());
+                    entity.setStatus(item.getStatus());
+                    entity.setLimitValue(Double.parseDouble(item.getLimit()));
+                    entity.setErrorValue(Double.parseDouble(item.getError()));
+                    entity.setWeightValue(Double.parseDouble(item.getWeight()));
+                    templateConstraintDirectionMapper.insert(entity);
+                });
+            }
+        }
+
+        // ====== 修改 TemplateParameters ======
+        TemplateParameters params = templateParametersMapper.selectById(project.getTemplateParametersId());
+        if (params != null) {
+            boolean paramModified = false;
+
+            if (dto.getAlgorithmName() != null) {
+                params.setAlgorithmName(dto.getAlgorithmName());
+                paramModified = true;
+            }
+            if (dto.getEvaluateTimeout() != null) {
+                params.setEvaluateTimeout(dto.getEvaluateTimeout());
+                paramModified = true;
+            }
+            if (dto.getThreadNum() != null) {
+                params.setThreadnum(dto.getThreadNum());
+                paramModified = true;
+            }
+            if (dto.getContinueLastbreakpoint() != null) {
+                params.setContinuelastbreakpoint(dto.getContinueLastbreakpoint());
+                paramModified = true;
+            }
+            if (paramModified) {
+                templateParametersMapper.updateById(params);
+            }
+
+            // 算法参数更新
+            if (dto.getAlgorithmParamList() != null) {
+                algorithmParamInstanceMapper.delete(new QueryWrapper<AlgorithmParamInstance>()
+                        .eq("project_id", projectId)
+                        .eq("algorithm", params.getAlgorithmName()));
+
+                dto.getAlgorithmParamList().forEach(item -> {
+                    AlgorithmParamInstance record = new AlgorithmParamInstance();
+                    record.setAlgorithm(params.getAlgorithmName());
+                    record.setParamKey(item.getKey());
+                    record.setValue(item.getValue());
+                    record.setNote(item.getLabel());
+                    record.setProjectId(Long.valueOf(project.getId()));
+                    algorithmParamInstanceMapper.insert(record);
+                });
+            }
+        }
+
+        return Result.ok("项目更新成功");
+    }
+
+
+
+
     @GetMapping("/export/ideal_conf")
     public Result exportIdealConf(@RequestParam Integer projectId, HttpServletResponse response) throws Exception {
         // 1. 查询项目对应的模板配置
@@ -258,24 +562,24 @@ public class ProjectController {
                 new QueryWrapper<TemplateConstraintDirection>().eq("template_config_id", config.getId())
         );
         List<String> directionTypes_0 = new ArrayList<>();
-        List<Double> thetaLower_0 = new ArrayList<>();
-        List<Double> thetaUpper_0 = new ArrayList<>();
-        List<Double> phiLower_0 = new ArrayList<>();
-        List<Double> phiUpper_0 = new ArrayList<>();
-        List<Double> directionObjs_0 = new ArrayList<>();
-        List<Double> deltas = new ArrayList<>();
+        List<Integer> thetaLower_0 = new ArrayList<>();
+        List<Integer> thetaUpper_0 = new ArrayList<>();
+        List<Integer> phiLower_0 = new ArrayList<>();
+        List<Integer> phiUpper_0 = new ArrayList<>();
+        List<Integer> directionObjs_0 = new ArrayList<>();
+        List<Integer> deltas = new ArrayList<>();
         List<String> statuses = new ArrayList<>();
-        List<Double> weights = new ArrayList<>();
+        List<Integer> weights = new ArrayList<>();
         for (TemplateConstraintDirection item : constraints) {
             directionTypes_0.add(item.getExpression());
-            thetaLower_0.add(item.getThetaStart());
-            thetaUpper_0.add(item.getThetaEnd());
-            phiLower_0.add(item.getPhiStart());
-            phiUpper_0.add(item.getPhiEnd());
-            directionObjs_0.add(item.getLimitValue());
-            deltas.add(item.getErrorValue());
+            thetaLower_0.add(item.getThetaStart().intValue());
+            thetaUpper_0.add(item.getThetaEnd().intValue());
+            phiLower_0.add(item.getPhiStart().intValue());
+            phiUpper_0.add(item.getPhiEnd().intValue());
+            directionObjs_0.add(item.getLimitValue().intValue());
+            deltas.add(item.getErrorValue().intValue());
             statuses.add(item.getStatus());
-            weights.add(item.getWeightValue());
+            weights.add(item.getWeightValue().intValue());
         }
         constraintDirection.put("DirectionType", toSingleQuotedNestedArrayString(directionTypes_0));
         constraintDirection.put("Theta_Lower_Direction", mapper.writeValueAsString(Collections.singletonList(thetaLower_0)));
@@ -341,12 +645,12 @@ public class ProjectController {
         // 3.2 频率设置 FreSetting，用项目配置的频率参数替换
         ObjectNode freSetting = mapper.createObjectNode();
         // 获取频率相关字段，若为空则用默认值0或模板值
-        double fStart = config.getFrequencyStart() != null ? config.getFrequencyStart() : 0.0;
-        double fEnd = config.getFrequencyEnd() != null ? config.getFrequencyEnd() : 0.0;
+        Double fStart = config.getFrequencyStart() ;
+        Double fEnd = config.getFrequencyEnd() ;
         int fPoints = config.getFrequencyPoints() != null ? config.getFrequencyPoints() : 1;
         // 将数值转换为无小数点（如200.0转成200）字符串，放入方括号
-        String freStartStr = "[" + (fStart % 1.0 == 0 ? (int) fStart : fStart) + "]";
-        String freEndStr = "[" + (fEnd % 1.0 == 0 ? (int) fEnd : fEnd) + "]";
+        String freStartStr = "[" +  fStart.intValue() + "]";
+        String freEndStr = "[" + fEnd.intValue() + "]";
         String freNumStr = "[" + fPoints + "]";
         freSetting.put("FreStart", freStartStr);
         freSetting.put("FreEnd", freEndStr);
@@ -380,18 +684,18 @@ public class ProjectController {
         );
         ObjectNode objDirection = mapper.createObjectNode();
         List<String> directionTypes = new ArrayList<>();
-        List<Double> thetaLower_1 = new ArrayList<>();
-        List<Double> thetaUpper_1 = new ArrayList<>();
-        List<Double> phiLower_1 = new ArrayList<>();
-        List<Double> phiUpper_1 = new ArrayList<>();
+        List<Integer> thetaLower_1 = new ArrayList<>();
+        List<Integer> thetaUpper_1 = new ArrayList<>();
+        List<Integer> phiLower_1 = new ArrayList<>();
+        List<Integer> phiUpper_1 = new ArrayList<>();
         List<String> optimizeTypes = new ArrayList<>();
 
         for (TemplateObjectiveDirectionTarget target : targets) {
             directionTypes.add(target.getTarget());  // 如 '侧向误差'
-            thetaLower_1.add(target.getThetaStart());
-            thetaUpper_1.add(target.getThetaEnd());
-            phiLower_1.add(target.getPhiStart());
-            phiUpper_1.add(target.getPhiEnd());
+            thetaLower_1.add(target.getThetaStart().intValue());
+            thetaUpper_1.add(target.getThetaEnd().intValue());
+            phiLower_1.add(target.getPhiStart().intValue());
+            phiUpper_1.add(target.getPhiEnd().intValue());
             optimizeTypes.add(target.getOptimizeType());
         }
 
@@ -457,20 +761,20 @@ public class ProjectController {
         // 3.5 ThetaPhiStep 设置，用 TemplateConfigs 角度范围和点数
         ObjectNode thetaPhi = mapper.createObjectNode();
         // φ 和 θ 的上下限值（默认0，如提供则用提供值）
-        double phiLower = config.getPhiStart() != null ? config.getPhiStart() : 0.0;
-        double phiUpper = config.getPhiEnd() != null ? config.getPhiEnd() : 0.0;
-        double thetaLower = config.getThetaStart() != null ? config.getThetaStart() : 0.0;
-        double thetaUpper = config.getThetaEnd() != null ? config.getThetaEnd() : 0.0;
+        Double phiLower = config.getPhiStart();
+        Double phiUpper = config.getPhiEnd() ;
+        Double thetaLower = config.getThetaStart() ;
+        Double thetaUpper = config.getThetaEnd() ;
         // 步长，如果点数>1
-        double phiStep = config.getPhiPoints() ;
-        double thetaStep = config.getThetaPoints();
+        Integer phiStep = config.getPhiPoints() ;
+        Integer thetaStep = config.getThetaPoints();
         // 转成所需格式字符串（取整如有必要）
-        String phiLowerStr = "[" + (phiLower % 1.0 == 0 ? (int) phiLower : phiLower) + "]";
-        String phiUpperStr = "[" + (phiUpper % 1.0 == 0 ? (int) phiUpper : phiUpper) + "]";
-        String thetaLowerStr = "[" + (thetaLower % 1.0 == 0 ? (int) thetaLower : thetaLower) + "]";
-        String thetaUpperStr = "[" + (thetaUpper % 1.0 == 0 ? (int) thetaUpper : thetaUpper) + "]";
-        String phiStepStr = "[" + (phiStep % 1.0 == 0 ? (int) phiStep : phiStep) + "]";
-        String thetaStepStr = "[" + (thetaStep % 1.0 == 0 ? (int) thetaStep : thetaStep) + "]";
+        String phiLowerStr = "[" + phiLower.intValue() + "]";
+        String phiUpperStr = "[" + phiUpper.intValue() + "]";
+        String thetaLowerStr = "[" + thetaLower.intValue() + "]";
+        String thetaUpperStr = "[" + thetaUpper.intValue()  + "]";
+        String phiStepStr = "[" + phiStep + "]";
+        String thetaStepStr = "[" + thetaStep + "]";
         thetaPhi.put("PhiLower", phiLowerStr);
         thetaPhi.put("PhiUpper", phiUpperStr);
         thetaPhi.put("PhiStep", phiStepStr);
@@ -573,7 +877,7 @@ public class ProjectController {
         for (TemplateOptimizeVariables var : optimizeVariables) {
             ObjectNode varNode = mapper.createObjectNode();
             // 设置 note 字段：展示变量名
-            varNode.put("default_value", Double.valueOf(var.getDefaultValue()));
+            varNode.put("default_value", Integer.valueOf(var.getDefaultValue()));
             System.out.println(var);
             System.out.println(var.getOptimize1());
             varNode.put("is_selected", var.getOptimize1());

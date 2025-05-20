@@ -1,9 +1,15 @@
 package com.zkril.aerial_back.controller;
 
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zkril.aerial_back.mapper.ProductsMapper;
+import com.zkril.aerial_back.mapper.UserFavoriteMapper;
 import com.zkril.aerial_back.pojo.Products;
+import com.zkril.aerial_back.pojo.UserFavorite;
+import com.zkril.aerial_back.util.JWTUtils;
 import com.zkril.aerial_back.util.Result;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,7 +22,10 @@ public class ProductsController {
 
     @Autowired
     private ProductsMapper productsMapper;
-
+    @Autowired
+    private UserFavoriteMapper userFavoriteMapper;
+    @Value("${app.image-base-url}")
+    private String imageBaseUrl;
     /**
      * 获取所有产品信息，并返回格式：
      * {
@@ -56,12 +65,13 @@ public class ProductsController {
         for (Products product : productList) {
             Map<String, Object> productMap = new HashMap<>();
             productMap.put("id", product.getProductId());
+            productMap.put("type","product");
             productMap.put("name", product.getName());
             // 将 photo 字符串（以逗号分隔）转换为 List<String>
-            productMap.put("photo", splitToList(product.getPhoto()));
+            productMap.put("photo", splitToListI(product.getPhoto()));
             productMap.put("intro", product.getIntro());
             productMap.put("desc", product.getDescp());
-            productMap.put("homePhoto", product.getHomePhoto());
+            productMap.put("homePhoto", imageBaseUrl +product.getHomePhoto());
             // 处理 data1 部分字段
             Map<String, Object> data1 = new HashMap<>();
             data1.put("name", splitToList(product.getData1Name()));
@@ -84,7 +94,12 @@ public class ProductsController {
     }
 
     @GetMapping("/get_product")
-    public Result getProductById(@RequestParam Integer id) {
+    public Result getProductById(@RequestParam Integer id, @RequestHeader("token") String token) {
+        DecodedJWT decodedJWT = JWTUtils.verify(token);
+        if (decodedJWT == null) {
+            return Result.fail();
+        }
+        String userId = decodedJWT.getClaim("userId").asString();
         // 根据 id 查询单个产品记录
         Products product = productsMapper.selectById(id);
         if (product == null) {
@@ -95,11 +110,12 @@ public class ProductsController {
         Map<String, Object> productMap = new HashMap<>();
         productMap.put("id", product.getProductId());
         productMap.put("name", product.getName());
+        productMap.put("type","product");
         // 将 photo 字符串（以逗号分隔）转换为 List<String>
-        productMap.put("photo", splitToList(product.getPhoto()));
+        productMap.put("photo", splitToListI(product.getPhoto()));
         productMap.put("intro", product.getIntro());
         productMap.put("desc", product.getDescp());
-        productMap.put("homePhoto", product.getHomePhoto());
+        productMap.put("homePhoto", imageBaseUrl+product.getHomePhoto());
 
         // 处理 data1 部分字段
         Map<String, Object> data1 = new HashMap<>();
@@ -116,6 +132,16 @@ public class ProductsController {
         data2.put("text", splitToList(product.getData2Text()));
         productMap.put("data2", data2);
 
+        boolean star=false;
+        LambdaQueryWrapper<UserFavorite> userFavoriteLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        userFavoriteLambdaQueryWrapper.eq(UserFavorite::getUserId, userId);
+        userFavoriteLambdaQueryWrapper.eq(UserFavorite::getType,"product");
+        userFavoriteLambdaQueryWrapper.eq(UserFavorite::getTargetId,id);
+        UserFavorite userFavorite=userFavoriteMapper.selectOne(userFavoriteLambdaQueryWrapper);
+        if (userFavorite != null) {
+            star=true;
+        }
+        productMap.put("isStar", star);
         productMap.put("buylink", product.getBuylink());
         return Result.ok(productMap);
     }
@@ -133,6 +159,21 @@ public class ProductsController {
         List<String> list = new ArrayList<>();
         for (String s : arr) {
             list.add(s.trim());
+        }
+        return list;
+    }
+    /**
+     * 辅助函数，将以逗号分隔的字符串拆分成 List<String>
+     */
+    private List<String> splitToListI(String str) {
+        if (str == null || str.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        // 如果数据中有多余的空格，可以通过 trim() 去除
+        String[] arr = str.split(",");
+        List<String> list = new ArrayList<>();
+        for (String s : arr) {
+            list.add(imageBaseUrl +s.trim());
         }
         return list;
     }

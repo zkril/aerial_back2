@@ -53,9 +53,11 @@ public class FolderController {
         if (folder == null) {
             return Result.fail("文件夹不存在");
         }
-
+        if (folder.getName().equals("默认文件夹")){
+            return Result.fail("默认文件夹不可删除");
+        }
         // 2. 检查文件夹下是否有项目
-        Long projectCount = projectsMapper.selectCount(new QueryWrapper<Projects>().eq("folder_id", folderId));
+        Long projectCount = Long.valueOf(projectsMapper.selectCount(new QueryWrapper<Projects>().eq("folder_id", folderId)));
         if (projectCount > 0) {
             return Result.fail("请先删除该文件夹下的所有项目后，再删除文件夹");
         }
@@ -76,7 +78,9 @@ public class FolderController {
         if (folder == null) {
             return Result.fail("文件夹不存在");
         }
-
+        if (folder.getName().equals("默认文件夹")){
+            return Result.fail("默认文件夹不可改名");
+        }
         // 2. 检查新名字是否冲突（同一个userId下）
         QueryWrapper<Folders> query = new QueryWrapper<>();
         query.eq("user_id", userId).eq("name", newFolderName);
