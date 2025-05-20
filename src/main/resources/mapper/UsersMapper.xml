@@ -13,11 +13,14 @@
             <result property="status" column="status" jdbcType="TINYINT"/>
             <result property="isAdmin" column="is_admin" jdbcType="TINYINT"/>
             <result property="avatar" column="avatar" jdbcType="VARCHAR"/>
+            <result property="sex" column="sex" jdbcType="INTEGER"/>
+            <result property="phone" column="phone" jdbcType="VARCHAR"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         user_id,username,password,
         email,reg_time,status,
-        is_admin,avatar
+        is_admin,avatar,sex,
+        phone
     </sql>
 </mapper>
