@@ -52,7 +52,7 @@ jobs:
               Stop-Process -Id $p.Id -Force
               Write-Host "已停止旧进程 $($p.Id)"
             }
-            Start-Process "java" "-jar -Xmx1024M -Xms256M $Jar"
+            Start-Process "java" "-jar -Xmx1024M -Xms256M $Jar --server.port=9090"
             Write-Host "新进程已启动"
           }
 
