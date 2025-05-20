@@ -23,13 +23,13 @@ public class MyConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/pro-image/**")
-                .addResourceLocations("file:D:/aerialdoc/pro-image/");
+                .addResourceLocations("file:C:/aerialdoc/pro-image/");
         registry.addResourceHandler("/des-image/**")
-                .addResourceLocations("file:D:/aerialdoc/des-image/");
+                .addResourceLocations("file:C:/aerialdoc/des-image/");
         registry.addResourceHandler("/comment-image/**")
-                .addResourceLocations("file:D:/aerialdoc/comment-image/");
+                .addResourceLocations("file:C:/aerialdoc/comment-image/");
         registry.addResourceHandler("/user-image/**")
-                .addResourceLocations("file:D:/aerialdoc/user-image/");
+                .addResourceLocations("file:C:/aerialdoc/user-image/");
     }
 //    @Override
 //    public void addInterceptors(InterceptorRegistry registry) {

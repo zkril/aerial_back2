@@ -44,7 +44,11 @@ spring:
           starttls:
             enable: true
     default-encoding: UTF-8
+
+
+
 app:
   image-base-url: "http://172.27.213.121:9301"
   comment-image : "C:/aerialdoc/comment-image"
   user-image : "C:/aerialdoc/user-image"
+
