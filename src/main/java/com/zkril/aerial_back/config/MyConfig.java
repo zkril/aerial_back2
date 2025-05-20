@@ -14,7 +14,7 @@ public class MyConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns("*")  // 使用 allowedOriginPatterns 替换 allowedOrigins
+                .allowedOriginPatterns("http://localhost:5174")  // 使用 allowedOriginPatterns 替换 allowedOrigins
                 .allowedHeaders(CorsConfiguration.ALL)
                 .allowedMethods(CorsConfiguration.ALL)
                 .allowCredentials(true)

@@ -164,7 +164,6 @@ public class ResultController {
     public Result get2DR(@PathVariable Integer resultId,@RequestParam String primarytype,@RequestParam String category,
                          @RequestParam(defaultValue = "deg") String unit) {
         ProjectResult result=projectResultMapper.selectById(resultId);
-
         if (result==null) {
             return Result.fail("未找到记录");
         }

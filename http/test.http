@@ -8,11 +8,11 @@ GET http://localhost:9301/result/pheno/1
 
 
 ### 二维矩形图
-GET http://localhost:9301/result/2dr/1?primarytype=Phi&category=测向误差
+GET http://localhost:9301/result/2dr/115?primarytype=Phi&category=1
 
 ### 二维矩形图
-GET http://localhost:9301/result/2dr/1?primarytype=Phi&category=测向误差&unit=rad
+GET http://localhost:9301/result/2dr/1?primarytype=Phi&category=1&unit=rad
 
 ### 二维矩形图
-GET http://localhost:9301/result/2dr/1?primarytype=Phi&category=第二相关峰
+GET http://localhost:9301/result/2dr/1?primarytype=Phi&category=2
 
