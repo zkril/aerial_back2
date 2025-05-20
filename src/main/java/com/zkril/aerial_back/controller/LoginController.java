@@ -1,9 +1,10 @@
 package com.zkril.aerial_back.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.zkril.aerial_back.mapper.FoldersMapper;
-import com.zkril.aerial_back.mapper.UsersMapper;
 
+import com.zkril.aerial_back.mapper.UsersMapper;
+import com.zkril.aerial_back.mapper.FoldersMapper;
 import com.zkril.aerial_back.pojo.Folders;
 import com.zkril.aerial_back.pojo.Users;
 import com.zkril.aerial_back.service.MailService;
@@ -11,6 +12,7 @@ import com.zkril.aerial_back.util.JWTUtils;
 import com.zkril.aerial_back.util.Result;
 import com.zkril.aerial_back.util.VerifyCodeCache;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,7 +30,8 @@ public class LoginController {
     UsersMapper usersMapper;
     @Autowired
     FoldersMapper foldersMapper;
-
+    @Value("${app.image-base-url}")
+    private String imageBaseUrl;
     //登录
     @PostMapping("/login")
     public Result login(@RequestParam String userName, @RequestParam String passwordHash) {
@@ -53,10 +56,18 @@ public class LoginController {
                 // 调用 JWTUtils 生成 token（此处创建一个工具类实例）
                 JWTUtils jwtUtils = new JWTUtils();
                 String token = jwtUtils.getToken(payload);
+                LambdaQueryWrapper<Folders> foldersQueryWrapper = new LambdaQueryWrapper<>();
+                foldersQueryWrapper
+                        .eq(Folders::getUserId, users.getUserId())
+                        .eq(Folders::getName, "默认文件夹");
+                Folders folder = foldersMapper.selectOne(foldersQueryWrapper);
 
                 // 封装返回结果，将用户信息和生成的 token 一同返回
                 Map<String, Object> data = new HashMap<>();
+                users.setPassword(null);
+                users.setAvatar(imageBaseUrl+users.getAvatar());
                 data.put("user", users);
+                data.put("folder", folder.getId());
                 data.put("token", token);
                 return Result.ok(data);
             }
