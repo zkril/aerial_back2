@@ -1,5 +1,4 @@
-server:
-  port: 9301
+
 spring:
   datasource:
     # 配置数据源类型
