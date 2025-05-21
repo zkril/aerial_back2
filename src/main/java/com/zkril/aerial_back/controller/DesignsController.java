@@ -56,6 +56,7 @@ public class DesignsController {
             data1.put("min", splitToList(design.getData1Min()));
             data1.put("normal", splitToList(design.getData1Normal()));
             data1.put("max", splitToList(design.getData1Max()));
+            data1.put("unit", splitToList(design.getData1Unit()));
             designMap.put("data1", data1);
 
             // 处理 data2 部分字段
