@@ -3,9 +3,11 @@ package com.zkril.aerial_back.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 
+import com.zkril.aerial_back.mapper.UserSessionsMapper;
 import com.zkril.aerial_back.mapper.UsersMapper;
 import com.zkril.aerial_back.mapper.FoldersMapper;
 import com.zkril.aerial_back.pojo.Folders;
+import com.zkril.aerial_back.pojo.UserSessions;
 import com.zkril.aerial_back.pojo.Users;
 import com.zkril.aerial_back.service.MailService;
 import com.zkril.aerial_back.util.JWTUtils;
@@ -28,6 +30,8 @@ public class LoginController {
 
     @Autowired
     UsersMapper usersMapper;
+    @Autowired
+    UserSessionsMapper userSessionsMapper;
     @Autowired
     FoldersMapper foldersMapper;
     @Value("${app.image-base-url}")
@@ -140,6 +144,11 @@ public class LoginController {
             folder.setUpdateTime(LocalDateTime.now());
 
             foldersMapper.insert(folder); // 新增文件夹
+
+            UserSessions userSessions=new UserSessions();
+            userSessions.setUser1Id(1);
+            userSessions.setUser2Id(userId);
+            userSessionsMapper.insert(userSessions);
 
             cache.remove(email); // 注册成功后删除验证码
             return Result.ok("注册成功");

@@ -58,63 +58,81 @@ public class MessageController {
     @GetMapping("/interactions")
     public Result getInteractions(@RequestParam("userId") Integer userId) {
         Users user = usersMapper.selectById(userId);
-        // 1. 查询我发过的评论ID
+        if (user == null) return Result.ok(Collections.emptyList());
+
+        // 1. 获取当前用户所有评论 ID
         List<Integer> myCommentIds = productCommentsMapper.selectList(
                 new QueryWrapper<ProductComments>().eq("user_id", userId)
         ).stream().map(ProductComments::getId).collect(Collectors.toList());
 
         if (myCommentIds.isEmpty()) return Result.ok(Collections.emptyList());
 
-        // 2. 查询回复了我的评论的所有评论
+        // 2. 查询所有回复我评论的记录
         List<ProductComments> replies = productCommentsMapper.selectList(
                 new QueryWrapper<ProductComments>().in("reply_to", myCommentIds)
         );
+        if (replies.isEmpty()) return Result.ok(Collections.emptyList());
 
-        // 3. 查询所有涉及的用户
-        Set<Integer> userIds = replies.stream().map(ProductComments::getUserId).collect(Collectors.toSet());
-
-        Map<Integer, Users> userMap = usersMapper.selectBatchIds(userIds).stream()
+        // 3. 批量查询涉及的用户
+        Set<Integer> userIds = replies.stream()
+                .map(ProductComments::getUserId)
+                .collect(Collectors.toSet());
+        Map<Integer, Users> userMap = userIds.isEmpty()
+                ? new HashMap<>()
+                : usersMapper.selectBatchIds(userIds).stream()
                 .collect(Collectors.toMap(Users::getUserId, Function.identity()));
 
-        // 4. 查询我的评论Map
+        // 4. 批量查询当前用户所有原始评论（Map化）
         Map<Integer, ProductComments> myCommentMap = productCommentsMapper.selectBatchIds(myCommentIds)
                 .stream().collect(Collectors.toMap(ProductComments::getId, Function.identity()));
 
-        // 5. 拼装结构
+        // 5. 批量查询所有二层楼中楼评论（提前查好）
+        Set<Integer> upperCommentIds = myCommentMap.values().stream()
+                .filter(c -> c.getReplyTo() != null)
+                .map(ProductComments::getReplyTo)
+                .collect(Collectors.toSet());
+        Map<Integer, ProductComments> upperCommentMap = upperCommentIds.isEmpty()
+                ? new HashMap<>()
+                : productCommentsMapper.selectBatchIds(upperCommentIds).stream()
+                .collect(Collectors.toMap(ProductComments::getId, Function.identity()));
+
+        // 6. 拼接结果
         List<Map<String, Object>> data = new ArrayList<>();
         for (ProductComments reply : replies) {
             Map<String, Object> item = new HashMap<>();
+            Users sender = userMap.get(reply.getUserId());
+
             item.put("id", reply.getId());
             item.put("time", reply.getCreatedTime());
-            item.put("sendName", userMap.get(reply.getUserId()).getUsername());
-            item.put("sendPhoto", userMap.get(reply.getUserId()).getAvatar());
-            item.put("sentence", "回复 @"+user.getUsername()+": "+reply.getIntro());
+            item.put("sendName", sender != null ? sender.getUsername() : "未知用户");
+            item.put("sendPhoto", sender != null ? sender.getAvatar() : null);
+            item.put("sentence", "回复 @" + user.getUsername() + ": " + reply.getIntro());
 
             ProductComments myComment = myCommentMap.get(reply.getReplyTo());
 
+            if (myComment != null) {
+                ProductComments upper = myComment.getReplyTo() != null
+                        ? upperCommentMap.get(myComment.getReplyTo())
+                        : null;
 
-            // 楼中楼查sentenceYours
-            String sentenceYours = "";
-            if (myComment != null && myComment.getReplyTo() != null) {
-                // 查更上一层评论（C）
-                ProductComments upperComment = productCommentsMapper.selectById(myComment.getReplyTo());
-                if (upperComment != null) {
-                    sentenceYours = upperComment.getIntro();
+                if (upper != null) {
+                    item.put("sentenceYours", user.getUsername() + ": " + myComment.getIntro());
+                    item.put("sentenceRow", upper.getIntro());
+                } else {
+                    item.put("sentenceYours", "");
+                    item.put("sentenceRow", myComment.getIntro());
                 }
-            }
-            if(sentenceYours.isEmpty()){
-                item.put("sentenceYours", sentenceYours);
-                item.put("sentenceRow", myComment != null ? myComment.getIntro() : "");
-            }
-           else {
-                item.put("sentenceYours", myComment != null ? user.getUsername()+": "+myComment.getIntro() : "");
-                item.put("sentenceRow", sentenceYours);
+            } else {
+                item.put("sentenceYours", "");
+                item.put("sentenceRow", "");
             }
 
             data.add(item);
         }
+
         return Result.ok(data);
     }
+
 
 
 }

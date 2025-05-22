@@ -566,20 +566,20 @@ public class ProjectController {
         List<Integer> thetaUpper_0 = new ArrayList<>();
         List<Integer> phiLower_0 = new ArrayList<>();
         List<Integer> phiUpper_0 = new ArrayList<>();
-        List<Integer> directionObjs_0 = new ArrayList<>();
-        List<Integer> deltas = new ArrayList<>();
+        List<Double> directionObjs_0 = new ArrayList<>();
+        List<Double> deltas = new ArrayList<>();
         List<String> statuses = new ArrayList<>();
-        List<Integer> weights = new ArrayList<>();
+        List<Double> weights = new ArrayList<>();
         for (TemplateConstraintDirection item : constraints) {
             directionTypes_0.add(item.getExpression());
             thetaLower_0.add(item.getThetaStart().intValue());
             thetaUpper_0.add(item.getThetaEnd().intValue());
             phiLower_0.add(item.getPhiStart().intValue());
             phiUpper_0.add(item.getPhiEnd().intValue());
-            directionObjs_0.add(item.getLimitValue().intValue());
-            deltas.add(item.getErrorValue().intValue());
+            directionObjs_0.add(item.getLimitValue());
+            deltas.add(item.getErrorValue());
             statuses.add(item.getStatus());
-            weights.add(item.getWeightValue().intValue());
+            weights.add(item.getWeightValue());
         }
         constraintDirection.put("DirectionType", toSingleQuotedNestedArrayString(directionTypes_0));
         constraintDirection.put("Theta_Lower_Direction", mapper.writeValueAsString(Collections.singletonList(thetaLower_0)));

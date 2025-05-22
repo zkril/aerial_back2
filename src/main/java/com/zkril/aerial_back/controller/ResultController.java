@@ -81,6 +81,7 @@ public class ResultController {
                 result.setObjectives(itemNode.get("objectives") != null ? itemNode.get("objectives").toString() : null);
                 result.setValid(itemNode.get("valid") != null ? itemNode.get("valid").asInt() : 0);
                 result.setDetail(itemNode.get("data").toString()); // 注意：此处仍然是 JSON 节点，建议转成字符串再存
+                System.out.println(itemNode.get("pheno"));
                 result.setPheno(itemNode.get("pheno") != null ? itemNode.get("pheno").toString() : null);
                 result.setFreq(itemNode.get("Freq") != null ? itemNode.get("Freq").toString() : null);
                 result.setPhi(itemNode.get("Phi") != null ? itemNode.get("Phi").toString() : null);
