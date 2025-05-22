@@ -1,8 +1,10 @@
 package com.zkril.aerial_back;
 
+import com.zkril.aerial_back.mapper.UserSessionsMapper;
 import com.zkril.aerial_back.mapper.UsersMapper;
 import com.zkril.aerial_back.mapper.FoldersMapper;
 import com.zkril.aerial_back.pojo.Folders;
+import com.zkril.aerial_back.pojo.UserSessions;
 import com.zkril.aerial_back.pojo.Users;
 import com.zkril.aerial_back.service.MailService;
 import com.zkril.aerial_back.util.VerifyCodeCache;
@@ -34,14 +36,18 @@ class LoginControllerTest {
     @MockBean
     private FoldersMapper foldersMapper;
     @MockBean
+    private UserSessionsMapper sessionsMapper;
+    @MockBean
     private VerifyCodeCache cache;
     @MockBean
     private MailService mailService;
+    @Autowired
+    private UserSessionsMapper userSessionsMapper;
 
     @BeforeEach
     void setUp() {
         // Reset mocks before each test to avoid interference
-        reset(usersMapper, foldersMapper, cache, mailService);
+        reset(usersMapper, foldersMapper, cache, mailService,sessionsMapper);
     }
 
     @Test
@@ -138,39 +144,69 @@ class LoginControllerTest {
 
     @Test
     void testRegisterSuccess() throws Exception {
-        // Arrange: prepare inputs for successful registration
+        // Arrange: 设置测试数据
         String userName = "newUser";
         String email = "newuser@example.com";
         String password = "NewPass123";
         String confirmPassword = "NewPass123";
         String verifyCode = "123456";
-        // Stub verification code as valid
+
+        // 模拟验证码校验成功
         when(cache.verify(email, verifyCode)).thenReturn(true);
-        // Stub that no existing user has the username or email
-        when(usersMapper.selectOne(any())).thenReturn(null).thenReturn(null);
-        // Stub insert operations to succeed
-        when(usersMapper.insert(org.mockito.ArgumentMatchers.any(Users.class))).thenReturn(1);
+
+        // 模拟用户名和邮箱均未被注册
+        when(usersMapper.selectOne(argThat(wrapper -> wrapper.getSqlSegment().contains("userName")))).thenReturn(null);
+
+        // 模拟用户插入成功并返回生成的userId
+        doAnswer(invocation -> {
+            Users userArg = invocation.getArgument(0);
+            userArg.setUserId(100);  // 模拟数据库生成userId
+            return 1;
+        }).when(usersMapper).insert(org.mockito.ArgumentMatchers.any(Users.class));
+
+        // 模拟默认文件夹插入成功
         when(foldersMapper.insert(org.mockito.ArgumentMatchers.any(Folders.class))).thenReturn(1);
 
-        // Act: perform registration request with all valid parameters
+        // 模拟UserSessions插入成功
+        when(sessionsMapper.insert(org.mockito.ArgumentMatchers.any(UserSessions.class))).thenReturn(1);
+
+        // Act: 执行注册请求
         mockMvc.perform(post("/register")
                         .param("userName", userName)
                         .param("email", email)
                         .param("passwordHash", password)
                         .param("confirmPassword", confirmPassword)
                         .param("code", verifyCode))
-                // Assert: expect success response and correct message
+                // Assert: 验证响应成功
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data").value("注册成功"))
-                .andReturn();
+                .andExpect(jsonPath("$.data").value("注册成功"));
 
-        // Verify: code was verified and then removed after success
+        // Verify: 校验验证码被调用且注册成功后删除
         verify(cache, times(1)).verify(email, verifyCode);
         verify(cache, times(1)).remove(email);
-        // Verify: new user was inserted and default folder created
-        verify(usersMapper, times(1)).insert(org.mockito.ArgumentMatchers.any(Users.class));
-        verify(foldersMapper, times(1)).insert(org.mockito.ArgumentMatchers.any(Folders.class));
+
+        // Verify: 用户被正确插入
+        ArgumentCaptor<Users> userCaptor = ArgumentCaptor.forClass(Users.class);
+        verify(usersMapper, times(1)).insert(userCaptor.capture());
+        Users insertedUser = userCaptor.getValue();
+        assertEquals(userName, insertedUser.getUsername());
+        assertEquals(email, insertedUser.getEmail());
+        assertEquals(password, insertedUser.getPassword());
+
+        // Verify: 默认文件夹被创建
+        ArgumentCaptor<Folders> folderCaptor = ArgumentCaptor.forClass(Folders.class);
+        verify(foldersMapper, times(1)).insert(folderCaptor.capture());
+        Folders createdFolder = folderCaptor.getValue();
+        assertEquals(100, createdFolder.getUserId());
+        assertEquals("默认文件夹", createdFolder.getName());
+
+        // Verify: UserSessions插入成功
+        ArgumentCaptor<UserSessions> sessionsCaptor = ArgumentCaptor.forClass(UserSessions.class);
+        verify(userSessionsMapper, times(1)).insert(sessionsCaptor.capture());
+        UserSessions createdSession = sessionsCaptor.getValue();
+        assertEquals(1, createdSession.getUser1Id());
+        assertEquals(100, createdSession.getUser2Id());
     }
 
     @Test
