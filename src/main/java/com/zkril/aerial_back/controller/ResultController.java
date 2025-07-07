@@ -159,99 +159,307 @@ public class ResultController {
         return Result.ok(response);
     }
 
-
-
     @GetMapping("/2dr/{resultId}")
-    public Result get2DR(@PathVariable Integer resultId,@RequestParam String primarytype,@RequestParam String category,
-                         @RequestParam(defaultValue = "deg") String unit) {
-        ProjectResult result=projectResultMapper.selectById(resultId);
-        if (result==null) {
-            return Result.fail("未找到记录");
+    public Result get2DCurve(@PathVariable Integer resultId,
+                             @RequestParam String primarytype,
+                             @RequestParam String category,
+                             @RequestParam(defaultValue = "deg") String unit,
+                             @RequestParam(defaultValue = "0") Integer phaseIndex) throws JsonProcessingException {
+
+        ProjectResult result = projectResultMapper.selectById(resultId);
+        if (result == null) return Result.fail("未找到记录");
+
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(result.getDetail().toString());
+
+        JsonNode freqList  = mapper.readTree(result.getFreq().toString());
+        JsonNode phiList   = mapper.readTree(result.getPhi().toString());
+        JsonNode thetaList = mapper.readTree(result.getTheta().toString());
+
+        List<String> xAxis = new ArrayList<>();
+        List<Map<String, Object>> series = new ArrayList<>();
+
+        // 获取目标数据源
+        JsonNode dataNode;
+        if ("相位".equals(category)) {
+            dataNode = root.get("phase_diff").get("realData").get(phaseIndex);  // freq -> theta -> phi
+        } else {
+            int idx = switch (category) {
+                case "方位面测向误差" -> 0;
+                case "俯仰面测向误差" -> 1;
+                case "第二相关峰" -> 2;
+                default -> -1;
+            };
+            if (idx == -1) return Result.fail("不支持的 category");
+            dataNode = root.get("objectives").get("realData").get(idx);         // freq -> theta -> phi
         }
-        if(primarytype.equals("Phi")){
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> response = new HashMap<>();
 
-            try {
-                if (result.getPheno() != null) {
-                    JsonNode jsonNode = mapper.readTree(result.getDetail().toString());
-                    JsonNode nodes = jsonNode.get("objectives").get("realData");
-                    JsonNode phiList = mapper.readTree(result.getPhi().toString());
-                    JsonNode freqList = mapper.readTree(result.getFreq().toString());
-                    JsonNode thetaList = mapper.readTree(result.getTheta().toString());
-                    List<String> xAxis = new ArrayList<>();
-                    phiList.forEach(p -> xAxis.add(p.asText()));
+        // 设置 xAxis 维度
+        switch (primarytype) {
+            case "Phi" -> phiList.forEach(p -> xAxis.add(p.asText()));
+            case "Theta" -> thetaList.forEach(t -> xAxis.add(t.asText()));
+            case "Freq" -> freqList.forEach(f -> xAxis.add(f.asText()));
+            default -> { return Result.fail("primarytype 仅支持 Phi / Theta / Freq"); }
+        }
 
-                    List<Map<String, Object>> series = new ArrayList<>();
+        // 设置单位后缀
+        String unitLabel = "rad".equalsIgnoreCase(unit) ? "rad" : "deg";
 
-                    if (category.equals("测向误差")) {
-                        nodes= nodes.get(0);
-                        for (int i = 0; i < nodes.size(); i++) {
-                            List<Double> yValues = new ArrayList<>();
-                            JsonNode freqData = nodes.get(i);
+        // 构造曲线（组合另外两维）
+        for (int f = 0; f < freqList.size(); f++) {
+            for (int t = 0; t < thetaList.size(); t++) {
+                for (int p = 0; p < phiList.size(); p++) {
 
-                            for (JsonNode phiVal : freqData.get(0)) {
-                                double value = phiVal.asDouble();
-                                // 根据单位选择：转换角度为弧度
-                                if ("rad".equalsIgnoreCase(unit)) {
-                                    value = Math.toRadians(value);
-                                }
-                                yValues.add(value);
+                    List<Double> yList = new ArrayList<>();
+                    switch (primarytype) {
+                        case "Phi" -> {
+                            for (int i = 0; i < phiList.size(); i++) {
+                                double v = dataNode.get(f).get(t).get(i).asDouble();
+                                yList.add(convert(v, unit));
                             }
-
-                            String freqLabel = freqList.get(i).asText();
-                            String thetaLabel = thetaList.get(0).asText(); // 固定 Theta=90deg
-                            String seriesName = "测向误差\nFreq=" + freqLabel + "MHz,Theta=" + thetaLabel + "deg";
-
-                            Map<String, Object> seriesItem = new HashMap<>();
-                            seriesItem.put("name", seriesName);
-                            seriesItem.put("data", yValues);
-                            series.add(seriesItem);
                         }
-                    }else if(category.equals("第二相关峰")){
-                        nodes= nodes.get(1);
-                        for (int i = 0; i < nodes.size(); i++) {
-                            List<Double> yValues = new ArrayList<>();
-                            JsonNode freqData = nodes.get(i);
-
-                            for (JsonNode phiVal : freqData.get(0)) {
-                                double value = phiVal.asDouble();
-                                // 根据单位选择：转换角度为弧度
-                                if ("rad".equalsIgnoreCase(unit)) {
-                                    value = Math.toRadians(value);
-                                }
-                                yValues.add(value);
+                        case "Theta" -> {
+                            for (int i = 0; i < thetaList.size(); i++) {
+                                double v = dataNode.get(f).get(i).get(p).asDouble();
+                                yList.add(convert(v, unit));
                             }
-
-                            String freqLabel = freqList.get(i).asText();
-                            String thetaLabel = thetaList.get(0).asText(); // 固定 Theta=90deg
-                            String seriesName = "第二相关峰\nFreq=" + freqLabel + "MHz,Theta=" + thetaLabel + "deg";
-
-                            Map<String, Object> seriesItem = new HashMap<>();
-                            seriesItem.put("name", seriesName);
-                            seriesItem.put("data", yValues);
-                            series.add(seriesItem);
                         }
-
-
+                        case "Freq" -> {
+                            for (int i = 0; i < freqList.size(); i++) {
+                                double v = dataNode.get(i).get(t).get(p).asDouble();
+                                yList.add(convert(v, unit));
+                            }
+                        }
                     }
 
-                    response.put("xAxis", xAxis);       // 对应 Phi 值
-                    response.put("series", series);     // 曲线数据集合
-                    return Result.ok(response);
+                    // 曲线命名（仅标出横轴之外的两个维度）
+                    String name = switch (primarytype) {
+                        case "Phi" -> String.format("%s\nFreq=%sMHz,Theta=%s%s",
+                                category,
+                                freqList.get(f).asText(),
+                                thetaList.get(t).asText(), unitLabel);
+                        case "Theta" -> String.format("%s\nFreq=%sMHz,Phi=%s%s",
+                                category,
+                                freqList.get(f).asText(),
+                                phiList.get(p).asText(), unitLabel);
+                        case "Freq" -> String.format("%s\nTheta=%s%s,Phi=%s%s",
+                                category,
+                                thetaList.get(t).asText(), unitLabel,
+                                phiList.get(p).asText(), unitLabel);
+                        default -> "未知类型";
+                    };
 
+                    // 校验该曲线是否与 xAxis 尺寸一致
+                    boolean valid =
+                            (primarytype.equals("Phi") && yList.size() == phiList.size()) ||
+                                    (primarytype.equals("Theta") && yList.size() == thetaList.size()) ||
+                                    (primarytype.equals("Freq") && yList.size() == freqList.size());
 
+                    if (valid) {
+                        series.add(Map.of("name", name, "data", yList));
+                    }
                 }
-            } catch (JsonProcessingException e) {
-                e.printStackTrace();
-                return Result.fail("解析 pheno 字段失败");
             }
-            return Result.ok(response);
-        }else{
-            return Result.fail("功能尚未包含");
         }
 
+
+        return Result.ok(Map.of("xAxis", xAxis, "series", series));
     }
+
+    private double convert(double v, String unit) {
+        return "rad".equalsIgnoreCase(unit) ? Math.toRadians(v) : v;
+    }
+
+    @GetMapping("/3dr/{resultId}")
+    public Result get3DR(@PathVariable Integer resultId,
+                         @RequestParam String xAxis,
+                         @RequestParam String yAxis,
+                         @RequestParam String zType,
+                         @RequestParam int zIndex,
+                         @RequestParam double filterValue,
+                         @RequestParam(defaultValue = "deg") String unit) throws JsonProcessingException {
+
+        if (xAxis.equals(yAxis)) return Result.fail("xAxis 和 yAxis 不能相同");
+
+        ProjectResult result = projectResultMapper.selectById(resultId);
+        if (result == null) return Result.fail("未找到记录");
+
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode detail = mapper.readTree(result.getDetail().toString());
+
+        JsonNode freqList  = mapper.readTree(result.getFreq().toString());
+        JsonNode phiList   = mapper.readTree(result.getPhi().toString());
+        JsonNode thetaList = mapper.readTree(result.getTheta().toString());
+
+        // 轴数据
+        Map<String, JsonNode> axisMap = Map.of(
+                "Freq", freqList,
+                "Phi", phiList,
+                "Theta", thetaList
+        );
+
+        List<Double> xList = new ArrayList<>();
+        axisMap.get(xAxis).forEach(v -> xList.add(v.asDouble()));
+
+        List<Double> yList = new ArrayList<>();
+        axisMap.get(yAxis).forEach(v -> yList.add(v.asDouble()));
+
+        // 固定轴
+        String fixedAxis = List.of("Freq", "Phi", "Theta").stream()
+                .filter(ax -> !ax.equals(xAxis) && !ax.equals(yAxis))
+                .findFirst()
+                .orElseThrow();
+
+        int fixedIndex = findNearestIndex(axisMap.get(fixedAxis), filterValue);
+        if (fixedIndex == -1) return Result.fail("固定维度值未找到");
+
+        // 获取数据源
+        JsonNode dataNode;
+        if ("phase_diff".equals(zType)) {
+            dataNode = detail.get("6_2").get("phase_diff").get("realData").get(zIndex);
+        } else if ("objectives".equals(zType)) {
+            dataNode = detail.get("6_2").get("objectives").get("realData").get(zIndex);
+        } else {
+            return Result.fail("zType 参数无效，应为 phase_diff 或 objectives");
+        }
+
+        // 构造三维点
+        List<List<Object>> points = new ArrayList<>();
+
+        for (int xi = 0; xi < xList.size(); xi++) {
+            for (int yi = 0; yi < yList.size(); yi++) {
+                int freqIdx  = xAxis.equals("Freq")  ? xi : yAxis.equals("Freq")  ? yi : fixedIndex;
+                int thetaIdx = xAxis.equals("Theta") ? xi : yAxis.equals("Theta") ? yi : fixedIndex;
+                int phiIdx   = xAxis.equals("Phi")   ? xi : yAxis.equals("Phi")   ? yi : fixedIndex;
+
+                double raw = dataNode.get(freqIdx).get(thetaIdx).get(phiIdx).asDouble();
+                double zVal = convert(raw, unit);
+
+                points.add(List.of(
+                        xList.get(xi),
+                        yList.get(yi),
+                        zVal
+                ));
+            }
+        }
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("xLabel", xAxis);
+        resp.put("yLabel", yAxis);
+        resp.put("zLabel", zType + "[" + zIndex + "]" + (unit.equals("rad") ? "(rad)" : "(deg)"));
+        resp.put("data", points);
+
+        return Result.ok(resp);
+    }
+
+
+    // 工具：匹配 filterValue 最近值对应的下标
+    private int findNearestIndex(JsonNode list, double target) {
+        double minDelta = Double.MAX_VALUE;
+        int index = -1;
+        for (int i = 0; i < list.size(); i++) {
+            double val = list.get(i).asDouble();
+            double delta = Math.abs(val - target);
+            if (delta < minDelta) {
+                minDelta = delta;
+                index = i;
+            }
+        }
+        return index;
+    }
+
+
+//    @GetMapping("/2dr/{resultId}")
+//    public Result get2DR(@PathVariable Integer resultId,@RequestParam String primarytype,@RequestParam String category,
+//                         @RequestParam(defaultValue = "deg") String unit) {
+//        ProjectResult result=projectResultMapper.selectById(resultId);
+//        if (result==null) {
+//            return Result.fail("未找到记录");
+//        }
+//        if(primarytype.equals("Phi")){
+//            ObjectMapper mapper = new ObjectMapper();
+//            Map<String, Object> response = new HashMap<>();
+//
+//            try {
+//                if (result.getPheno() != null) {
+//                    JsonNode jsonNode = mapper.readTree(result.getDetail().toString());
+//                    JsonNode nodes = jsonNode.get("objectives").get("realData");
+//                    JsonNode phiList = mapper.readTree(result.getPhi().toString());
+//                    JsonNode freqList = mapper.readTree(result.getFreq().toString());
+//                    JsonNode thetaList = mapper.readTree(result.getTheta().toString());
+//                    List<String> xAxis = new ArrayList<>();
+//                    phiList.forEach(p -> xAxis.add(p.asText()));
+//
+//                    List<Map<String, Object>> series = new ArrayList<>();
+//
+//                    if (category.equals("测向误差")) {
+//                        nodes= nodes.get(0);
+//                        for (int i = 0; i < nodes.size(); i++) {
+//                            List<Double> yValues = new ArrayList<>();
+//                            JsonNode freqData = nodes.get(i);
+//
+//                            for (JsonNode phiVal : freqData.get(0)) {
+//                                double value = phiVal.asDouble();
+//                                // 根据单位选择：转换角度为弧度
+//                                if ("rad".equalsIgnoreCase(unit)) {
+//                                    value = Math.toRadians(value);
+//                                }
+//                                yValues.add(value);
+//                            }
+//
+//                            String freqLabel = freqList.get(i).asText();
+//                            String thetaLabel = thetaList.get(0).asText(); // 固定 Theta=90deg
+//                            String seriesName = "测向误差\nFreq=" + freqLabel + "MHz,Theta=" + thetaLabel + "deg";
+//
+//                            Map<String, Object> seriesItem = new HashMap<>();
+//                            seriesItem.put("name", seriesName);
+//                            seriesItem.put("data", yValues);
+//                            series.add(seriesItem);
+//                        }
+//                    }else if(category.equals("第二相关峰")){
+//                        nodes= nodes.get(1);
+//                        for (int i = 0; i < nodes.size(); i++) {
+//                            List<Double> yValues = new ArrayList<>();
+//                            JsonNode freqData = nodes.get(i);
+//
+//                            for (JsonNode phiVal : freqData.get(0)) {
+//                                double value = phiVal.asDouble();
+//                                // 根据单位选择：转换角度为弧度
+//                                if ("rad".equalsIgnoreCase(unit)) {
+//                                    value = Math.toRadians(value);
+//                                }
+//                                yValues.add(value);
+//                            }
+//
+//                            String freqLabel = freqList.get(i).asText();
+//                            String thetaLabel = thetaList.get(0).asText(); // 固定 Theta=90deg
+//                            String seriesName = "第二相关峰\nFreq=" + freqLabel + "MHz,Theta=" + thetaLabel + "deg";
+//
+//                            Map<String, Object> seriesItem = new HashMap<>();
+//                            seriesItem.put("name", seriesName);
+//                            seriesItem.put("data", yValues);
+//                            series.add(seriesItem);
+//                        }
+//
+//
+//                    }
+//
+//                    response.put("xAxis", xAxis);       // 对应 Phi 值
+//                    response.put("series", series);     // 曲线数据集合
+//                    return Result.ok(response);
+//
+//
+//                }
+//            } catch (JsonProcessingException e) {
+//                e.printStackTrace();
+//                return Result.fail("解析 pheno 字段失败");
+//            }
+//            return Result.ok(response);
+//        }else{
+//            return Result.fail("功能尚未包含");
+//        }
+//
+//    }
 
 }
 

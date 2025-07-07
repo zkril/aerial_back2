@@ -1,4 +1,5 @@
-
+server:
+  port: 9301
 spring:
   datasource:
     # 配置数据源类型
@@ -47,7 +48,7 @@ spring:
 
 
 app:
-  image-base-url: "http://172.27.213.121:9301"
+  image-base-url: "http://127.0.0.1:9301"
   comment-image : "C:/aerialdoc/comment-image"
   user-image : "C:/aerialdoc/user-image"
 

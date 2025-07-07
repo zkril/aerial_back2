@@ -14,7 +14,7 @@ public class MyConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns("http://localhost:5174")  // 使用 allowedOriginPatterns 替换 allowedOrigins
+                .allowedOriginPatterns("*")  // 使用 allowedOriginPatterns 替换 allowedOrigins
                 .allowedHeaders(CorsConfiguration.ALL)
                 .allowedMethods(CorsConfiguration.ALL)
                 .allowCredentials(true)
@@ -37,7 +37,7 @@ public class MyConfig implements WebMvcConfigurer {
 //                .addPathPatterns("/**")
 //                .excludePathPatterns("/login", "/register","/get_all_products","/send_code",
 //                        "/forgot/reset_password","/forgot/send_code","/get_all_designs"
-//                ,"/pro-image/**","/des-image/**","/comment-image/**","/user-image/**"); // 登录、注册等接口排除拦截
+//                        ,"/pro-image/**","/des-image/**","/comment-image/**","/user-image/**"); // 登录、注册等接口排除拦截
 //    }
 }
 
